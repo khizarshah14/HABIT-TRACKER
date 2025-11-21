@@ -1,25 +1,24 @@
-// habit_tracker_with_flashcards.cpp
-// Complete program — copy/paste ready for Visual Studio (and other compilers).
-
 #include <iostream>
-#include <cstdlib>
+#include <fstream>
 #include <string>
+#include <vector>
+#include <limits>
 #include <chrono>
 #include <thread>
-#define NOMINMAX                // Prevent Windows.h from defining min/max macros that break std::numeric_limits::max()
-#include <Windows.h>
-#include <vector>
-#include <fstream>
-#include <ctime>
-#include <cstdio>
-#include <algorithm>
-#include <limits>
-#include <sstream>              // for safe parsing
 #include <random>
+#include <sstream>
+#include <algorithm>
+#include <ctime>
+#include <cctype>
+
+#ifdef _WIN32
+#define NOMINMAX
+#include <Windows.h>
+#endif
 
 using namespace std;
 
-// ============= CLEAR SCREEN ===================
+// ================= CLEAR SCREEN =================
 void clearScreen() {
 #ifdef _WIN32
     system("cls");
@@ -28,490 +27,27 @@ void clearScreen() {
 #endif
 }
 
-// ============= HEADER ==========================
+// ================= HEADER =======================
 void header() {
     cout << "=====================================\n";
     cout << "          HABIT TRACKER\n";
     cout << "=====================================\n";
 }
 
-// FUNCTION DECLARATIONS
-void Timer();
-void todoList();
-void motivationalQuote();
-void yourProgress();
-void notification();
-string getCurrentDate();
-void updateStreak();
-void logHistory(int pomodoros, int tasks);
-void playNotificationSound();
-
-// =============================================================
-//                       FLASHCARDS CLASS
-// =============================================================
-class Flashcards {
-private:
-    vector<string> questions;
-    vector<string> answers;
-
-public:
-
-    void load_from_file(const string& filename) {
-        ifstream fin(filename);
-
-        if (!fin.is_open()) {
-            cout << "No previous flashcard data found!\n";
-            return;
-        }
-
-        string q, a;
-        while (getline(fin, q) && getline(fin, a)) {
-            questions.push_back(q);
-            answers.push_back(a);
-        }
-
-        fin.close();
-        cout << "Flashcards loaded.\n";
-    }
-
-    void save_to_file(const string& filename) {
-        ofstream fout(filename);
-
-        for (size_t i = 0; i < questions.size(); i++) {
-            fout << questions[i] << "\n";
-            fout << answers[i] << "\n";
-        }
-
-        fout.close();
-        cout << "Flashcards saved.\n";
-    }
-
-    void add_card() {
-        // flush any leftover input
-        cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-        string q, a;
-        cout << "Enter question: ";
-        getline(cin, q);
-
-        cout << "Enter answer: ";
-        getline(cin, a);
-
-        questions.push_back(q);
-        answers.push_back(a);
-
-        cout << "Flashcard added!\n";
-    }
-
-    void show_all() {
-        if (questions.empty()) {
-            cout << "No flashcards available.\n";
-            return;
-        }
-
-        cout << "\n--- All Flashcards ---\n";
-        for (size_t i = 0; i < questions.size(); i++) {
-            cout << "\nQ" << i + 1 << ": " << questions[i];
-            cout << "\nA: " << answers[i] << "\n";
-        }
-        cout << endl;
-    }
-
-    void start_quiz() {
-        if (questions.empty()) {
-            cout << "No flashcards available to quiz!\n";
-            return;
-        }
-
-        // make sure input buffer is clean
-        cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        string user;
-        int score = 0;
-
-        cout << "\n--- Flashcard Quiz ---\n";
-
-        for (size_t i = 0; i < questions.size(); i++) {
-            cout << "\nQ" << i + 1 << ": " << questions[i] << "\n";
-            cout << "Your answer: ";
-            getline(cin, user);
-
-            if (user == answers[i]) {
-                cout << "Correct!\n";
-                score++;
-            }
-            else {
-                cout << "Wrong! Correct answer: " << answers[i] << "\n";
-            }
-        }
-
-        cout << "\nQuiz finished! Score: " << score << "/" << questions.size() << "\n";
-    }
-
-    void flashcardMenu() {
-        string filename = "flashcards.txt";
-        int c;
-
-        while (true) {
-            cout << "\n----- FLASHCARDS MENU -----\n";
-            cout << "1. Load From File\n";
-            cout << "2. Save To File\n";
-            cout << "3. Add Card\n";
-            cout << "4. Show All\n";
-            cout << "5. Start Quiz\n";
-            cout << "6. Back to Main Menu\n";
-            cout << "Enter choice: ";
-            if (!(cin >> c)) {
-                cin.clear();
-                cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-                cout << "Invalid input. Try again.\n";
-                continue;
-            }
-
-            switch (c) {
-            case 1: load_from_file(filename); break;
-            case 2: save_to_file(filename); break;
-            case 3: add_card(); break;
-            case 4: show_all(); break;
-            case 5: start_quiz(); break;
-            case 6: return;
-            default: cout << "Invalid option.\n";
-            }
-        }
-    }
-};
-
-// =============================================================
-//                       NOTIFICATION SOUND
-// =============================================================
-void playNotificationSound() {
-    // simple beep sequence (Windows)
-#ifdef _WIN32
-    Beep(1200, 150);
-    Beep(900, 120);
-    Beep(1500, 180);
-#else
-    // fallback beep for non-windows (may not make sound)
-    cout << '\a' << flush;
-#endif
-}
-
-// =============================================================
-//                         POMODORO TIMER
-// =============================================================
-void Timer() {
-    cout << "Pomodoro Timer selected.\n";
-    int focusmin = 25, breakmin = 5, longbreakmin = 0, cycles = 0;
-
-    cout << "Enter number of Pomodoro cycles: ";
-    if (!(cin >> cycles)) {
-        cin.clear();
-        cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        cout << "Invalid number.\n";
-        return;
-    }
-
-    if (cycles >= 4) {
-        cout << "Enter long break duration (minutes): ";
-        if (!(cin >> longbreakmin)) {
-            cin.clear();
-            cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            longbreakmin = 0;
-        }
-    }
-
-    for (int session = 1; session <= cycles; ++session) {
-
-        cout << "\nFocus Session " << session << " (" << focusmin << " minutes)\n";
-
-        for (int i = focusmin * 60; i >= 0; i--) {
-            int m = i / 60;
-            int s = i % 60;
-
-            cout << "\rTime left: " << m << "m " << (s < 10 ? "0" : "") << s << "s " << flush;
-            this_thread::sleep_for(chrono::seconds(1));
-        }
-
-        playNotificationSound();
-
-        if (session != cycles) {
-            if (session % 4 == 0) {
-                cout << "\nLong break (" << longbreakmin << " min)\n";
-
-                for (int i = longbreakmin * 60; i >= 0; i--) {
-                    int m = i / 60, s = i % 60;
-                    cout << "\rBreak: " << m << "m " << (s < 10 ? "0" : "") << s << "s " << flush;
-                    this_thread::sleep_for(chrono::seconds(1));
-                }
-            }
-            else {
-                cout << "\nShort break (" << breakmin << " min)\n";
-
-                for (int i = breakmin * 60; i >= 0; i--) {
-                    int m = i / 60, s = i % 60;
-                    cout << "\rBreak: " << m << "m " << (s < 10 ? "0" : "") << s << "s " << flush;
-                    this_thread::sleep_for(chrono::seconds(1));
-                }
-            }
-        }
-
-        playNotificationSound();
-    }
-
-    cout << "\nAll Pomodoro cycles complete!\n";
-
-    int totalP = 0, tasks = 0;
-    ifstream in("progress.txt");
-    if (in.is_open()) in >> totalP >> tasks;
-    in.close();
-
-    totalP++;
-
-    ofstream out("progress.txt");
-    out << totalP << " " << tasks;
-    out.close();
-
-    updateStreak();
-    logHistory(1, 0);
-}
-
-// =============================================================
-//                         TODO LIST
-// =============================================================
-void todoList() {
-    cout << "To-do List selected.\n";
-
-    vector<string> tasks;
-    string task;
-    int choice;
-
-    ifstream infile("tasks.txt");
-    while (getline(infile, task)) tasks.push_back(task);
-    infile.close();
-
-    while (true) {
-        cout << "\n---- TO-DO LIST ----\n";
-        cout << "1. View Tasks\n";
-        cout << "2. Add Task\n";
-        cout << "3. Mark Task Done\n";
-        cout << "4. Back\n";
-        cout << "Choice: ";
-        if (!(cin >> choice)) {
-            cin.clear();
-            cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            cout << "Invalid entry.\n";
-            continue;
-        }
-
-        cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-        if (choice == 1) {
-            if (tasks.empty()) cout << "No tasks.\n";
-            else {
-                for (size_t i = 0; i < tasks.size(); ++i)
-                    cout << i + 1 << ". " << tasks[i] << "\n";
-            }
-        }
-        else if (choice == 2) {
-            cout << "Enter task: ";
-            getline(cin, task);
-            if (!task.empty()) tasks.push_back(task);
-            cout << "Added!\n";
-        }
-        else if (choice == 3) {
-            cout << "Enter task number: ";
-            int num;
-            if (!(cin >> num)) {
-                cin.clear();
-                cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-                cout << "Invalid number.\n";
-                continue;
-            }
-            cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-            if (num > 0 && num <= static_cast<int>(tasks.size())) {
-                cout << "Completed: " << tasks[num - 1] << "\n";
-                tasks.erase(tasks.begin() + (num - 1));
-            }
-            else cout << "Invalid.\n";
-        }
-        else if (choice == 4) break;
-        else cout << "Invalid.\n";
-    }
-
-    ofstream out("tasks.txt");
-    for (auto& t : tasks) out << t << "\n";
-    out.close();
-
-    int totalP = 0, completed = 0;
-    ifstream prog("progress.txt");
-    if (prog.is_open()) prog >> totalP >> completed;
-    prog.close();
-
-    completed++;
-
-    ofstream pout("progress.txt");
-    pout << totalP << " " << completed;
-    pout.close();
-
-    updateStreak();
-    logHistory(0, 1);
-}
-
-// =============================================================
-//                    MOTIVATIONAL QUOTE
-// =============================================================
-void motivationalQuote() {
-    vector<string> q = {
-        "Push yourself, because no one else will.",
-        "It always seems impossible until it's done.",
-        "Discipline today = success tomorrow.",
-        "Small steps daily lead to greatness.",
-        "Your only limit is your mind."
-    };
-
-    // Use C++ random for slightly better randomness
-    static std::mt19937 rng(static_cast<unsigned>(std::chrono::high_resolution_clock::now().time_since_epoch().count()));
-    std::uniform_int_distribution<int> dist(0, static_cast<int>(q.size()) - 1);
-    int i = dist(rng);
-
-    cout << "\n\"" << q[i] << "\"\n";
-}
-
-// =============================================================
-//                       PROGRESS SYSTEM
-// =============================================================
-void yourProgress() {
-    cout << "Your Progress:\n";
-
-    int totalP = 0, tasks = 0;
-
-    ifstream file("progress.txt");
-    if (file.is_open()) file >> totalP >> tasks;
-    file.close();
-
-    cout << "Pomodoros: " << totalP << "\n";
-    cout << "Tasks: " << tasks << "\n";
-
-    // ASCII progress bar safely
-    int percent = min(100, (totalP + tasks) * 10);
-    cout << "\nProgress: [";
-    int filled = percent / 5;
-    for (int i = 0; i < filled; i++) cout << "#";
-    for (int i = filled; i < 20; i++) cout << "-";
-    cout << "] " << percent << "%\n";
-
-    // streak
-    string last;
-    int streak = 0, best = 0;
-
-    ifstream sfile("streak.txt");
-    if (sfile.is_open()) sfile >> last >> streak >> best;
-    sfile.close();
-
-    cout << "\nCurrent Streak: " << streak;
-    cout << "\nBest Streak: " << best << "\n";
-
-    // history (ASCII only)
-    ifstream h("history.txt");
-    string line;
-    vector<string> hist;
-
-    while (getline(h, line)) hist.push_back(line);
-
-    cout << "\nLast 7 days:\n";
-    int start = max(0, static_cast<int>(hist.size()) - 7);
-
-    for (int i = start; i < static_cast<int>(hist.size()); i++) {
-        cout << hist[i] << "\n";
-    }
-}
-
-// =============================================================
-//                     NOTIFICATIONS
-// =============================================================
-void notification() {
-    vector<string> notes;
-    string line;
-    int choice;
-
-    ifstream infile("notifications.txt");
-    while (getline(infile, line)) notes.push_back(line);
-    infile.close();
-
-    while (true) {
-        cout << "\n----- NOTIFICATIONS -----\n";
-        cout << "1. View\n2. Add\n3. Delete\n4. Clear All\n5. Back\n";
-        cout << "Choice: ";
-        if (!(cin >> choice)) {
-            cin.clear();
-            cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            cout << "Invalid entry.\n";
-            continue;
-        }
-        cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-        if (choice == 1) {
-            if (notes.empty()) cout << "No notifications.\n";
-            else for (size_t i = 0; i < notes.size(); i++) cout << i + 1 << ". " << notes[i] << "\n";
-        }
-        else if (choice == 2) {
-            cout << "Enter: ";
-            getline(cin, line);
-            if (!line.empty()) notes.push_back(line);
-            playNotificationSound();
-        }
-        else if (choice == 3) {
-            cout << "Enter number: ";
-            int num;
-            if (!(cin >> num)) {
-                cin.clear();
-                cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-                cout << "Invalid number.\n";
-                continue;
-            }
-            cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-            if (num > 0 && num <= static_cast<int>(notes.size())) {
-                notes.erase(notes.begin() + (num - 1));
-                playNotificationSound();
-            } else cout << "Invalid.\n";
-        }
-        else if (choice == 4) {
-            notes.clear();
-            playNotificationSound();
-        }
-        else if (choice == 5) break;
-    }
-
-    ofstream out("notifications.txt");
-    for (auto& n : notes) out << n << "\n";
-    out.close();
-}
-
-// =============================================================
-//                   DATE + STREAK SYSTEM (safe localtime)
-// =============================================================
+// ================= DATE & STREAK =================
 string getCurrentDate() {
     time_t now = time(nullptr);
     tm local_tm{};
-#if defined(_MSC_VER)
-    // safe localtime on MSVC
+#ifdef _MSC_VER
     localtime_s(&local_tm, &now);
-#elif defined(__unix__) || defined(__APPLE__)
-    localtime_r(&now, &local_tm);
 #else
-    // fallback (not thread-safe)
-    tm* tmp = localtime(&now);
-    if (tmp) local_tm = *tmp;
+    localtime_r(&now, &local_tm);
 #endif
-
     char buffer[11];
     snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d",
         1900 + local_tm.tm_year,
         1 + local_tm.tm_mon,
-        local_tm.tm_mday
-    );
-
+        local_tm.tm_mday);
     return string(buffer);
 }
 
@@ -534,37 +70,29 @@ void updateStreak() {
     out.close();
 }
 
-// =============================================================
-//                      HISTORY LOGGING
-// =============================================================
 void logHistory(int pomodoros, int tasks) {
     string today = getCurrentDate();
     vector<string> lines;
-    string l;
+    string line;
 
     ifstream infile("history.txt");
-    while (getline(infile, l)) lines.push_back(l);
+    while (getline(infile, line)) lines.push_back(line);
     infile.close();
 
     bool found = false;
-
     for (string& entry : lines) {
         if (entry.size() >= 10 && entry.substr(0, 10) == today) {
-            // safer parse using istringstream
             istringstream iss(entry);
             string datePart;
             int p = 0, t = 0;
             iss >> datePart >> p >> t;
-
             p += pomodoros;
             t += tasks;
-
             entry = today + " " + to_string(p) + " " + to_string(t);
             found = true;
             break;
         }
     }
-
     if (!found) {
         lines.push_back(today + " " + to_string(pomodoros) + " " + to_string(tasks));
     }
@@ -574,56 +102,336 @@ void logHistory(int pomodoros, int tasks) {
     out.close();
 }
 
-// =============================================================
-//                        MAIN FUNCTION
-// =============================================================
+// ================= NOTIFICATION SOUND =================
+void playNotificationSound() {
+#ifdef _WIN32
+    Beep(1200, 150);
+    Beep(900, 120);
+    Beep(1500, 180);
+#else
+    cout << '\a' << flush;
+#endif
+}
+
+// ================= PROGRESS MANAGER =================
+class ProgressManager {
+private:
+    int pomodoros = 0;
+    int tasks = 0;
+public:
+    ProgressManager() { load(); }
+
+    void load() {
+        ifstream in("progress.txt");
+        if (in.is_open()) in >> pomodoros >> tasks;
+        in.close();
+    }
+
+    void save() {
+        ofstream out("progress.txt");
+        out << pomodoros << " " << tasks;
+        out.close();
+    }
+
+    void addPomodoro() { pomodoros++; save(); updateStreak(); logHistory(1, 0); }
+    void addTask() { tasks++; save(); updateStreak(); logHistory(0, 1); }
+
+    void display() {
+        cout << "Pomodoros: " << pomodoros << "\n";
+        cout << "Tasks: " << tasks << "\n";
+        int percent = min(100, (pomodoros + tasks) * 10);
+        cout << "\nProgress: [";
+        int filled = percent / 5;
+        for (int i = 0; i < filled; i++) cout << "#";
+        for (int i = filled; i < 20; i++) cout << "-";
+        cout << "] " << percent << "%\n";
+
+        string last;
+        int streak = 0, best = 0;
+        ifstream sfile("streak.txt");
+        if (sfile.is_open()) sfile >> last >> streak >> best;
+        sfile.close();
+
+        cout << "\nCurrent Streak: " << streak;
+        cout << "\nBest Streak: " << best << "\n";
+
+        cout << "\nLast 7 Days:\n";
+        ifstream h("history.txt");
+        vector<string> hist;
+        while (getline(h, last)) hist.push_back(last);
+        int start = max(0, (int)hist.size() - 7);
+        for (int i = start; i < hist.size(); i++) cout << hist[i] << "\n";
+    }
+};
+
+// ================= NOTIFICATION MANAGER =================
+class NotificationManager {
+private:
+    struct Note {
+        string message;
+        string reminder; // YYYY-MM-DD HH:MM
+    };
+    vector<Note> notes;
+
+    bool isReminderDue(const string& r) {
+        if (r.empty()) return false;
+        time_t now = time(nullptr);
+        tm local_tm{};
+#ifdef _MSC_VER
+        localtime_s(&local_tm, &now);
+#else
+        localtime_r(&now, &local_tm);
+#endif
+        int y, m, d, hh, mm;
+        if (sscanf(r.c_str(), "%d-%d-%d %d:%d", &y, &m, &d, &hh, &mm) != 5) return false;
+        tm reminder_tm{};
+        reminder_tm.tm_year = y - 1900;
+        reminder_tm.tm_mon = m - 1;
+        reminder_tm.tm_mday = d;
+        reminder_tm.tm_hour = hh;
+        reminder_tm.tm_min = mm;
+        reminder_tm.tm_sec = 0;
+        time_t reminder_time = mktime(&reminder_tm);
+        return difftime(now, reminder_time) >= 0;
+    }
+
+public:
+    NotificationManager() { load(); }
+
+    void load() {
+        notes.clear();
+        ifstream in("notifications.txt");
+        string line;
+        while (getline(in, line)) {
+            size_t sep = line.find('|');
+            if (sep != string::npos) {
+                notes.push_back({ line.substr(0, sep), line.substr(sep + 1) });
+            } else {
+                notes.push_back({ line, "" });
+            }
+        }
+        in.close();
+    }
+
+    void save() {
+        ofstream out("notifications.txt");
+        for (auto& n : notes)
+            out << n.message << "|" << n.reminder << "\n";
+        out.close();
+    }
+
+    void showDueReminders() {
+        for (auto& n : notes)
+            if (isReminderDue(n.reminder)) {
+                cout << "REMINDER: " << n.message << " (" << n.reminder << ")\n";
+                playNotificationSound();
+            }
+    }
+
+    void menu() {
+        int choice;
+        string line, timeStr;
+        while (true) {
+            cout << "\n----- NOTIFICATIONS -----\n";
+            cout << "1. View\n2. Add\n3. Delete\n4. Clear All\n5. Back\nChoice: ";
+            if (!(cin >> choice)) { cin.clear(); cin.ignore(numeric_limits<streamsize>::max(), '\n'); continue; }
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+            if (choice == 1) {
+                if (notes.empty()) cout << "No notifications.\n";
+                else for (int i = 0; i < notes.size(); i++)
+                    cout << i + 1 << ". " << notes[i].message << (notes[i].reminder.empty() ? "" : " | " + notes[i].reminder) << "\n";
+            }
+            else if (choice == 2) {
+                cout << "Enter message: "; getline(cin, line);
+                cout << "Enter reminder (YYYY-MM-DD HH:MM) or leave empty: "; getline(cin, timeStr);
+                if (!line.empty()) notes.push_back({ line, timeStr });
+                playNotificationSound();
+            }
+            else if (choice == 3) {
+                cout << "Enter number: "; int num; if (!(cin >> num)) { cin.clear(); cin.ignore(numeric_limits<streamsize>::max(), '\n'); continue; }
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                if (num > 0 && num <= notes.size()) { notes.erase(notes.begin() + num - 1); playNotificationSound(); }
+            }
+            else if (choice == 4) { notes.clear(); playNotificationSound(); }
+            else if (choice == 5) { save(); return; }
+        }
+    }
+};
+
+// ================= FLASHCARDS =================
+class Flashcards {
+private:
+    vector<string> questions;
+    vector<string> answers;
+
+    string normalize(const string& s) {
+        string res;
+        for (char c : s) if (!isspace(c)) res += tolower(c);
+        return res;
+    }
+
+public:
+    void loadFromFile(const string& filename) {
+        ifstream fin(filename);
+        if (!fin.is_open()) { cout << "No previous flashcard data found!\n"; return; }
+        string q, a;
+        while (getline(fin, q) && getline(fin, a)) { questions.push_back(q); answers.push_back(a); }
+        fin.close(); cout << "Flashcards loaded.\n";
+    }
+
+    void saveToFile(const string& filename) {
+        ofstream fout(filename);
+        for (size_t i = 0; i < questions.size(); i++) { fout << questions[i] << "\n" << answers[i] << "\n"; }
+        fout.close(); cout << "Flashcards saved.\n";
+    }
+
+    void addCard() {
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        string q, a;
+        cout << "Enter question: "; getline(cin, q);
+        cout << "Enter answer: "; getline(cin, a);
+        questions.push_back(q); answers.push_back(a);
+        cout << "Flashcard added!\n";
+    }
+
+    void showAll() {
+        if (questions.empty()) { cout << "No flashcards available.\n"; return; }
+        cout << "\n--- All Flashcards ---\n";
+        for (size_t i = 0; i < questions.size(); i++)
+            cout << "\nQ" << i + 1 << ": " << questions[i] << "\nA: " << answers[i] << "\n";
+    }
+
+    void startQuiz() {
+        if (questions.empty()) { cout << "No flashcards available to quiz!\n"; return; }
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        vector<int> order(questions.size());
+        for (size_t i = 0; i < order.size(); i++) order[i] = i;
+        shuffle(order.begin(), order.end(), mt19937(static_cast<unsigned>(chrono::high_resolution_clock::now().time_since_epoch().count())));
+        string user; int score = 0;
+        cout << "\n--- Flashcard Quiz ---\n";
+        for (size_t idx : order) {
+            cout << "\nQ: " << questions[idx] << "\nYour answer: ";
+            getline(cin, user);
+            if (normalize(user) == normalize(answers[idx])) { cout << "Correct!\n"; score++; }
+            else cout << "Wrong! Correct answer: " << answers[idx] << "\n";
+        }
+        cout << "\nQuiz finished! Score: " << score << "/" << questions.size() << "\n";
+    }
+
+    void menu() {
+        string filename = "flashcards.txt"; int c;
+        while (true) {
+            cout << "\n----- FLASHCARDS MENU -----\n";
+            cout << "1. Load From File\n2. Save To File\n3. Add Card\n4. Show All\n5. Start Quiz\n6. Back\nEnter choice: ";
+            if (!(cin >> c)) { cin.clear(); cin.ignore(numeric_limits<streamsize>::max(), '\n'); continue; }
+            switch (c) {
+            case 1: loadFromFile(filename); break;
+            case 2: saveToFile(filename); break;
+            case 3: addCard(); break;
+            case 4: showAll(); break;
+            case 5: startQuiz(); break;
+            case 6: return;
+            default: cout << "Invalid option.\n";
+            }
+        }
+    }
+};
+
+// ================= POMODORO TIMER =================
+class PomodoroTimer {
+private:
+    int focus = 25;
+    int shortBreak = 5;
+    int longBreak = 15;
+public:
+    void start(ProgressManager& pm) {
+        int cycles = 0;
+        cout << "Enter number of Pomodoro cycles: "; if (!(cin >> cycles)) { cin.clear(); cin.ignore(numeric_limits<streamsize>::max(), '\n'); return; }
+        if (cycles >= 4) { cout << "Enter long break (minutes): "; if (!(cin >> longBreak)) { longBreak = 15; cin.clear(); cin.ignore(numeric_limits<streamsize>::max(), '\n'); } }
+
+        for (int s = 1; s <= cycles; s++) {
+            cout << "\nFocus Session " << s << " (" << focus << " min)\n";
+            for (int i = focus * 60; i >= 0; i--) { cout << "\rTime left: " << i / 60 << "m " << i % 60 << "s " << flush; this_thread::sleep_for(chrono::seconds(1)); }
+            playNotificationSound();
+            pm.addPomodoro();
+
+            if (s != cycles) {
+                int brk = (s % 4 == 0) ? longBreak : shortBreak;
+                cout << "\nBreak (" << brk << " min)\n";
+                for (int i = brk * 60; i >= 0; i--) { cout << "\rBreak: " << i / 60 << "m " << i % 60 << "s " << flush; this_thread::sleep_for(chrono::seconds(1)); }
+                playNotificationSound();
+            }
+        }
+        cout << "\nAll Pomodoro cycles complete!\n";
+    }
+};
+
+// ================= TO-DO LIST =================
+class TodoList {
+private:
+    vector<string> tasks;
+public:
+    void load() { string t; ifstream in("tasks.txt"); while (getline(in, t)) tasks.push_back(t); in.close(); }
+    void save() { ofstream out("tasks.txt"); for (auto& t : tasks) out << t << "\n"; out.close(); }
+
+    void menu(ProgressManager& pm) {
+        load();
+        int choice;
+        string task;
+        while (true) {
+            cout << "\n---- TO-DO LIST ----\n1. View Tasks\n2. Add Task\n3. Mark Task Done\n4. Back\nChoice: ";
+            if (!(cin >> choice)) { cin.clear(); cin.ignore(numeric_limits<streamsize>::max(), '\n'); continue; }
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            if (choice == 1) {
+                if (tasks.empty()) cout << "No tasks.\n"; else { for (int i = 0; i < tasks.size(); i++) cout << i + 1 << ". " << tasks[i] << "\n"; }
+            }
+            else if (choice == 2) {
+                cout << "Enter task: "; getline(cin, task); if (!task.empty()) { tasks.push_back(task); pm.addTask(); cout << "Added!\n"; }
+            }
+            else if (choice == 3) {
+                cout << "Enter task number: "; int num; if (!(cin >> num)) { cin.clear(); cin.ignore(numeric_limits<streamsize>::max(), '\n'); continue; }
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                if (num > 0 && num <= tasks.size()) { cout << "Completed: " << tasks[num - 1] << "\n"; tasks.erase(tasks.begin() + num - 1); }
+            }
+            else if (choice == 4) { save(); break; }
+        }
+        save();
+    }
+};
+
+// ================= MAIN =================
 int main() {
-    // seed randomness
-    std::mt19937 rng(static_cast<unsigned>(std::chrono::high_resolution_clock::now().time_since_epoch().count()));
+    ProgressManager pm;
+    NotificationManager nm;
+    Flashcards fc;
+    PomodoroTimer pt;
+    TodoList tdl;
+
+    clearScreen();
+    header();
+    nm.showDueReminders(); // Show due reminders at startup
 
     int select;
-
     while (true) {
-        clearScreen();
-        header();
-        cout << "1. Pomodoro Timer\n";
-        cout << "2. To-do List\n";
-        cout << "3. Flashcards\n";
-        cout << "4. Motivational Quote\n";
-        cout << "5. Your Progress\n";
-        cout << "6. Notifications\n";
-        cout << "7. Quit\n";
-        cout << "\nEnter: ";
-        if (!(cin >> select)) {
-            cin.clear();
-            cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            cout << "Invalid choice.\n";
-            continue;
-        }
-
-        clearScreen();
-        header();
-
+        cout << "\n1. Pomodoro Timer\n2. To-do List\n3. Flashcards\n4. Motivational Quote\n5. Your Progress\n6. Notifications\n7. Quit\nEnter: ";
+        if (!(cin >> select)) { cin.clear(); cin.ignore(numeric_limits<streamsize>::max(), '\n'); continue; }
+        clearScreen(); header();
         switch (select) {
-        case 1: Timer(); break;
-        case 2: todoList(); break;
-        case 3: {
-            Flashcards fc;
-            fc.flashcardMenu();
-            break;
+        case 1: pt.start(pm); break;
+        case 2: tdl.menu(pm); break;
+        case 3: fc.menu(); break;
+        case 4: {
+            vector<string> quotes = { "Push yourself.", "Discipline today = success tomorrow.", "Small steps daily lead to greatness." };
+            mt19937 rng(static_cast<unsigned>(chrono::high_resolution_clock::now().time_since_epoch().count()));
+            uniform_int_distribution<int> dist(0, quotes.size() - 1);
+            cout << "\n\"" << quotes[dist(rng)] << "\"\n"; break;
         }
-        case 4: motivationalQuote(); break;
-        case 5: yourProgress(); break;
-        case 6: notification(); break;
-        case 7:
-            cout << "Goodbye!\n";
-            return 0;
-        default:
-            cout << "Invalid option.\n";
+        case 5: pm.display(); break;
+        case 6: nm.menu(); break;
+        case 7: cout << "Goodbye!\n"; return 0;
+        default: cout << "Invalid option.\n";
         }
-
-        cout << "\nPress Enter to continue...";
-        cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        cin.get();
+        cout << "\nPress Enter to continue..."; cin.ignore(numeric_limits<streamsize>::max(), '\n'); cin.get();
     }
 }
