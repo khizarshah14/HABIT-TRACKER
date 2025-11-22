@@ -115,6 +115,7 @@ void logHistory(int pomodoros, int tasks) {
             break;
         }
     }
+};
 
     // Otherwise create new record
     if (!found)
@@ -380,7 +381,7 @@ public:
    ============================================================ */
 
 void motivationalQuote() {
-    cout << "💬 Motivational Quote selected.\n";
+    cout << "Motivational Quote selected.\n";
 
     vector<string> quotes = {
         "Push yourself, because no one else is going to do it for you.",
@@ -404,8 +405,8 @@ void motivationalQuote() {
     srand(time(0));
     int randomIndex = rand() % quotes.size();
 
-    cout << "\n\033[1;33m💡 Motivational Quote 💡\033[0m\n";
-    cout << "\033[1;32m\"" << quotes[randomIndex] << "\"\033[0m\n";
+    cout << "\n Motivational Quote \n";
+    cout << quotes[randomIndex] << "\n";
 }
 
 /* ============================================================
@@ -567,72 +568,77 @@ public:
    ============================================================ */
 
 void Timer() {
-    cout << "⏳ Pomodoro Timer selected.\n";
-    cout << "Work for 25 minutes, then take a 5-minute break.\n";
+   cout << "Pomodoro Timer selected.\n";
+	cout << "Work for 25 minutes, then take a 5-minute break.\n";
 
-    int focusmin = 25;
-    int breakmin = 5;
-    int longbreakmin = 0;
-    int cycles = 0;
+	int focusmin = 25;
+	int breakmin = 5;
+	int longbreakmin = 0;
+	int cycles = 0;
 
-    cout << "Enter number of Pomodoro cycles: ";
-    cin >> cycles;
+	cout << "Enter number of Pomodoro cycles: ";
+	cin >> cycles;
 
-    // Long break input
-    if (cycles >= 4) {
-        cout << "Enter long break duration (minutes): ";
-        cin >> longbreakmin;
-    }
+	// Long break input
+	if (cycles >= 4) {
+		cout << "Enter long break duration (15-30 minutes): ";
+		cin >> longbreakmin;
+		while (longbreakmin < 15 || longbreakmin > 30)
+		{
+			cout << "Enter long break duration (15-30 minutes): ";
+			cin >> longbreakmin;
+		}
+	}
 
-    // Run all sessions
-    for (int session = 1; session <= cycles; ++session) {
+	// Run all sessions
+	for (int session = 1; session <= cycles; ++session) {
 
-        // Focus session
-        cout << "\n\033[1;36m🕒 Focus Session " << session << " Started (" << focusmin << " minutes)\033[0m\n";
+		// Focus session
+		cout << "\nFocus Session " << session << " Started (" << focusmin << " minutes)\n";
 
-        for (int i = focusmin * 60; i >= 0; --i) {
-            int mins = i / 60;
-            int secs = i % 60;
+		for (int i = focusmin * 60; i >= 0; --i) {
+			int mins = i / 60;
+			int secs = i % 60;
 
-            cout << "\rTime left: " << mins << "m " << (secs < 10 ? "0" : "") << secs << "s   " << flush;
-            this_thread::sleep_for(chrono::seconds(1));
-        }
+			cout << "\rTime left: " << mins << "m " << (secs < 10 ? "0" : "") << secs << "s   " << flush;
+			this_thread::sleep_for(chrono::seconds(1));
+		}
 
-        Beep(750, 300);
+		Beep(750, 300);
 
-        // Long break every 4th session
-        if (session % 4 == 0 && session != cycles) {
-            cout << "\033[1;34m🎉 Time for a LONG break! (" << longbreakmin << " minutes)\033[0m\n";
+		// Long break every 4th session
+		if (session % 4 == 0 && session != cycles) {
+			cout << "Time for a LONG break! (" << longbreakmin << " minutes)\n";
 
-            for (int i = longbreakmin * 60; i >= 0; --i) {
-                int mins = i / 60;
-                int secs = i % 60;
+			for (int i = longbreakmin * 60; i >= 0; --i) {
+				int mins = i / 60;
+				int secs = i % 60;
 
-                cout << "\rLong break left: " << mins << "m " << (secs < 10 ? "0" : "") << secs << "s   " << flush;
-                this_thread::sleep_for(chrono::seconds(1));
-            }
-        }
+				cout << "\rLong break left: " << mins << "m " << (secs < 10 ? "0" : "") << secs << "s   " << flush;
+				this_thread::sleep_for(chrono::seconds(1));
+			}
+		}
 
-        // Short break otherwise
-        else if (session != cycles) {
-            cout << "\033[1;32mFocus complete! Take a short break (" << breakmin << " minutes).\033[0m\n";
+		// Short break otherwise
+		else if (session != cycles) {
+			cout << "Focus Session complete! Take a short break (" << breakmin << " minutes)\n";
 
-            for (int i = breakmin * 60; i >= 0; --i) {
-                int mins = i / 60;
-                int secs = i % 60;
+			for (int i = breakmin * 60; i >= 0; --i) {
+				int mins = i / 60;
+				int secs = i % 60;
 
-                cout << "\rBreak left: " << mins << "m " << (secs < 10 ? "0" : "") << secs << "s   " << flush;
-                this_thread::sleep_for(chrono::seconds(1));
-            }
-        }
+				cout << "\rBreak left: " << mins << "m " << (secs < 10 ? "0" : "") << secs << "s   " << flush;
+				this_thread::sleep_for(chrono::seconds(1));
+			}
+		}
 
-        Beep(1000, 300);
+		Beep(1000, 300);
 
-        if (session != cycles)
-            cout << "\033[1;33mBreak finished! Get ready for the next Pomodoro.\033[0m\n";
-    }
+		if (session != cycles)
+			cout << "Break finished! Get ready for the next Pomodoro.\n";
+	}
 
-    cout << "\n\033[1;35m🏁 All Pomodoro cycles complete! Well done!\033[0m\n";
+	cout << "\n All Pomodoro cycles complete! Well done!\n";
 }
 
 /* ============================================================
@@ -640,7 +646,7 @@ void Timer() {
    ============================================================ */
 
 void todoList() {
-    cout << "📝 To-do List selected.\n";
+    cout << "To-do List selected.\n";
     cout << "Add and check off tasks to stay productive!\n";
 
     vector<string> tasks;
@@ -656,11 +662,11 @@ void todoList() {
     // To-do list menu
     while (true) {
 
-        cout << "\n\033[1;34m---- TO-DO LIST ----\033[0m\n";
-        cout << "\033[1;36m1. View Tasks\033[0m\n";
-        cout << "\033[1;36m2. Add Task\033[0m\n";
-        cout << "\033[1;36m3. Mark Task Done\033[0m\n";
-        cout << "\033[1;36m4. Back to Main Menu\033[0m\n";
+        cout << "\n---- TO-DO LIST ----\n";
+        cout << "1. View Tasks\n";
+        cout << "2. Add Task\n";
+        cout << "3. Mark Task Done\n";
+        cout << "4. Back to Main Menu\n";
         cout << "Enter choice: ";
 
         cin >> choice;
@@ -668,38 +674,38 @@ void todoList() {
 
         // Show tasks
         if (choice == 1) {
-            cout << "\n\033[1;33mYour Tasks:\033[0m\n";
+            cout << "\nYour Tasks:\n";
 
             if (tasks.empty()) {
-                cout << "\033[1;31mNo tasks yet!\033[0m\n";
+                cout << "No tasks yet!\n";
             }
             else {
                 for (int i = 0; i < tasks.size(); ++i)
-                    cout << "\033[1;32m" << i + 1 << ". " << tasks[i] << "\033[0m\n";
+                    cout  << i + 1 << ". " << tasks[i] << "\n";
             }
         }
 
         // Add new task
         else if (choice == 2) {
-            cout << "\033[1;35mEnter new task: \033[0m";
+            cout << "Enter new task: ";
             getline(cin, task);
             tasks.push_back(task);
 
-            cout << "\033[1;32mTask added!\033[0m\n";
+            cout << "Task added!\n";
         }
 
         // Complete a task
         else if (choice == 3) {
             int num;
-            cout << "\033[1;35mEnter task number to mark done: \033[0m";
+            cout << "Enter task number to mark done: ";
             cin >> num;
 
             if (num > 0 && num <= tasks.size()) {
-                cout << "\033[1;32mTask \"" << tasks[num - 1] << "\" completed!\033[0m\n";
+                cout << "Task \"" << tasks[num - 1] << "\" completed!\n";
                 tasks.erase(tasks.begin() + num - 1);
             }
             else {
-                cout << "\033[1;31mInvalid task number!\033[0m\n";
+                cout << "Invalid task number!\n";
             }
         }
 
@@ -709,7 +715,7 @@ void todoList() {
         }
 
         else {
-            cout << "\033[1;31mInvalid option.\033[0m\n";
+            cout << "Invalid option.\n";
         }
     }
 
