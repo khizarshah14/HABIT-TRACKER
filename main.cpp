@@ -115,6 +115,7 @@ void logHistory(int pomodoros, int tasks) {
             break;
         }
     }
+};
 
     // Otherwise create new record
     if (!found)
