@@ -115,7 +115,7 @@ void logHistory(int pomodoros, int tasks) {
             break;
         }
     }
-};
+
 
     // Otherwise create new record
     if (!found)
@@ -243,7 +243,7 @@ private:
         // Parse reminder
         int y, m, d, hh, mm;
 
-        if (sscanf(r.c_str(), "%d-%d-%d %d:%d", &y, &m, &d, &hh, &mm) != 5)
+        if (sscanf_s(r.c_str(), "%d-%d-%d %d:%d", &y, &m, &d, &hh, &mm) != 5)
             return false;
 
         tm reminder_tm{};
@@ -796,4 +796,5 @@ int main() {
         cin.get();
     }
 }
+
 
