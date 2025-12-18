@@ -385,20 +385,20 @@ void motivationalQuote() {
 
     vector<string> quotes = {
         "Push yourself, because no one else is going to do it for you.",
-        "It always seems impossible until it’s done.",
-        "Don’t watch the clock; do what it does. Keep going.",
+        "It always seems impossible until it is done.",
+        "Do not watch the clock; do what it does. Keep going.",
         "Success is the sum of small efforts repeated day in and day out.",
         "Discipline is choosing between what you want now and what you want most.",
-        "Believe you can and you're halfway there.",
+        "Believe you can and you are halfway there.",
         "Small steps every day lead to big results.",
         "Your only limit is your mind.",
         "Dream big. Start small. Act now.",
-        "Success doesn’t come from what you do occasionally, it comes from what you do consistently.",
+        "Success does not come from what you do occasionally, it comes from what you do consistently.",
         "Stay focused and never give up.",
         "Great things never come from comfort zones.",
         "Work hard in silence, let success make the noise.",
         "Progress is progress, no matter how small.",
-        "You don’t have to be perfect, just consistent."
+        "You do not have to be perfect, just consistent."
     };
 
     // Random index
@@ -578,6 +578,10 @@ void Timer() {
 
 	cout << "Enter number of Pomodoro cycles: ";
 	cin >> cycles;
+	while(cycles<=0)
+{ cout << "Enter number of Pomodoro cycles: ";
+	cin >> cycles;
+}
 
 	// Long break input
 	if (cycles >= 4) {
@@ -796,5 +800,6 @@ int main() {
         cin.get();
     }
 }
+
 
 
